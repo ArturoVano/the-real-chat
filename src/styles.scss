@@ -6,6 +6,11 @@
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
+:root {
+  --primary-darker-color: #205493;
+  --accent-darker-color: #2196F3;
+}
+
 html {
   @include mat.theme((
     color: (
@@ -37,3 +42,5 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+

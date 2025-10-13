@@ -2,9 +2,10 @@ import { computed, inject, Injectable, signal } from "@angular/core";
 import { Message } from "../interfaces/message";
 import { FIRESTORE } from "../../app.config";
 import { connect } from 'ngxtension/connect';
-import { catchError, map, merge, Observable, of, tap } from "rxjs";
-import { collection, limit, orderBy, query } from "firebase/firestore";
+import { catchError, defer, exhaustMap, ignoreElements, map, merge, Observable, of, Subject, tap } from "rxjs";
+import { addDoc, collection, limit, orderBy, query } from "firebase/firestore";
 import { collectionData } from 'rxfire/firestore';
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 
 interface MessageState {
   messages: Message[];
@@ -19,6 +20,7 @@ export class MessageService {
 
   // sources
   messages$ = this.getMessages();
+  add$ = new Subject<Message['content']>();
 
   // state
   private state = signal<MessageState>({
@@ -30,17 +32,18 @@ export class MessageService {
   messages = computed(() => this.state().messages);
   error = computed(() => this.state().error);
 
-  constuctor() {
+  constructor() {
     // reducers
-    console.log('constructor del message service')
-    this.messages$.subscribe(messages => {
-      console.log('Mensajes: ', messages)
-    })
     const nextState$ = merge(
-      this.messages$.pipe(map((messages) => ({ messages })))
+      this.messages$.pipe(map((messages) => ({ messages }))),
+      this.add$.pipe(
+        exhaustMap((message) => this.addMessage(message)),
+        ignoreElements(),
+        catchError((error) => of ({ error }))
+      )
     );
+
     connect(this.state).with(nextState$);
-    console.log('Fin del constructor')
   }
 
   private getMessages() {
@@ -67,5 +70,8 @@ export class MessageService {
       content: message,
       created: Date.now().toString(),
     }
+
+    const messagesCollection = collection(this.firestore, 'messages');
+    return defer(() => addDoc(messagesCollection, newMessage));
   }
 }
