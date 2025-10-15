@@ -19,6 +19,7 @@ export class AuthService {
   private auth = inject(AUTH);
 
   // sources
+  // Will emit the active user from Firebase or null.
   private user$ = authState(this.auth);
 
   // state

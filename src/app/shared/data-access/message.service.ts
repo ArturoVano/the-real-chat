@@ -1,11 +1,12 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
 import { Message } from "../interfaces/message";
-import { FIRESTORE } from "../../app.config";
 import { connect } from 'ngxtension/connect';
-import { catchError, defer, exhaustMap, ignoreElements, map, merge, Observable, of, Subject, tap } from "rxjs";
+import { catchError, defer, exhaustMap, filter, ignoreElements, map, merge, Observable, of, retry, Subject, tap } from "rxjs";
+import { toObservable } from "@angular/core/rxjs-interop";
 import { addDoc, collection, limit, orderBy, query } from "firebase/firestore";
+import { FIRESTORE } from "../../app.config";
 import { collectionData } from 'rxfire/firestore';
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { AuthService } from "./auth.service";
 
 interface MessageState {
   messages: Message[];
@@ -17,9 +18,16 @@ interface MessageState {
 })
 export class MessageService {
   private firestore = inject(FIRESTORE);
+  private authService = inject(AuthService);
 
   // sources
-  messages$ = this.getMessages();
+  private authUser$ = toObservable(this.authService.user);
+  messages$ = this.getMessages().pipe(
+    // restart stream when user reauthenticates
+    retry({
+      delay: () => this.authUser$.pipe(filter((user) => !!user))
+    })
+  );
   add$ = new Subject<Message['content']>();
 
   // state
@@ -35,8 +43,15 @@ export class MessageService {
   constructor() {
     // reducers
     const nextState$ = merge(
-      this.messages$.pipe(map((messages) => ({ messages }))),
+      this.messages$.pipe(
+        tap((messages) => {
+          const mensaje = messages;
+          console.log({ messages })
+        }),
+        map((messages) => ({ messages }))
+      ),
       this.add$.pipe(
+        tap((message) => console.log('message en add$', message)),
         exhaustMap((message) => this.addMessage(message)),
         ignoreElements(),
         catchError((error) => of ({ error }))
@@ -47,7 +62,6 @@ export class MessageService {
   }
 
   private getMessages() {
-    console.log('firestore service:', this.firestore);
     const messagesCollection = query(
       collection(this.firestore, 'messages'),
       orderBy('created', 'desc'),
@@ -55,18 +69,16 @@ export class MessageService {
     );
     // idField get the unique id of the documents, and reverse invert the order
     return collectionData(messagesCollection, {idField: 'id'}).pipe(
-      tap(msgs => console.log('collectionData emitted (raw):', msgs)),
       map((messages) => [...messages].reverse()),
-      catchError(err => {
-        console.error('collectionData error:', err);
-        return of([]); // evita que la suscripción se rompa
+      catchError(() => {
+        return of([]);
       })
     ) as Observable<any[]>;
   }
 
   private addMessage(message: string) {
-    const newMessage: Message = {
-      author: 'me@test.com',
+    const newMessage = {
+      author: this.authService.user()?.email,
       content: message,
       created: Date.now().toString(),
     }
