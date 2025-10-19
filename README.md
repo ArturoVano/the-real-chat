@@ -16,7 +16,7 @@ Navigate to `http://localhost:4000/` to access Firebase Local Emlator Suite
 
 ## About
 
-The bild of this proyect is exclusively to practise declarative programming with modern Angular, and touch the surfface of Firebase. 
+The build of this proyect is exclusively to practise declarative programming with modern Angular, and touch the surfface of Firebase. 
 
 It uses the Smart and Dumb Components filosophy.
 
