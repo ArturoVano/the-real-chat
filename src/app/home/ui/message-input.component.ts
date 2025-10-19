@@ -14,7 +14,6 @@ import { MatIconModule } from '@angular/material/icon';
       <button
         (click)="
           send.emit(messageControl.value);
-          messageControl.reset()
         "
         type="submit"
         class="message-input__btn"

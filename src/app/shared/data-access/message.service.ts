@@ -44,14 +44,9 @@ export class MessageService {
     // reducers
     const nextState$ = merge(
       this.messages$.pipe(
-        tap((messages) => {
-          const mensaje = messages;
-          console.log({ messages })
-        }),
         map((messages) => ({ messages }))
       ),
       this.add$.pipe(
-        tap((message) => console.log('message en add$', message)),
         exhaustMap((message) => this.addMessage(message)),
         ignoreElements(),
         catchError((error) => of ({ error }))

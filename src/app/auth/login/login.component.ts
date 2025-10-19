@@ -9,11 +9,15 @@ import { AuthService } from "../../shared/data-access/auth.service";
   selector: 'app-login',
   template: `
     <div class="container gradient-bg">
-      <app-login-form
-        [status]="loginService.status()"
-        (login)="loginService.login$.next($event)"
-      />
-      <a routerLink="/auth/register">Create account</a>
+      @if (authService.user() === null) {
+        <app-login-form
+          [status]="loginService.status()"
+          (login)="loginService.login$.next($event)"
+        />
+        <a routerLink="/auth/register">Create account</a>
+      } @else {
+        <mat-spinner diameter="50" />
+      }
     </div>
   `,
  imports: [LoginFormComponent, RouterModule, MatProgressSpinnerModule],

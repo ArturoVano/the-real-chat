@@ -1,12 +1,16 @@
-import { Component, input } from "@angular/core";
+import { Component, effect, input, viewChild } from "@angular/core";
 import { Message } from "../../shared/interfaces/message";
+import { AuthUser } from "../../shared/data-access/auth.service";
+import { CdkScrollable, ScrollingModule } from "@angular/cdk/scrolling";
 
 @Component({
   selector: 'app-message-list',
   template: `
-    <ul class="gradient-bg">
+    <ul cdkScrollable class="gradient-bg">
       @for (message of messages(); track $index) {
-        <li>
+        <li [style.flex-direction]="
+          message.author === activeUser()?.email ? 'row-reverse' : 'row'
+        ">
           <div class="avatar animate-in-primary">
             <img
               src="https://api.dicebear.com/7.x/bottts/svg?seed={{
@@ -56,7 +60,22 @@ import { Message } from "../../shared/interfaces/message";
       filter: drop-shadow(2px 4px 3px var(--primary-darker-color));
     }
   `,
+  imports: [ScrollingModule]
 })
 export class MessageListComponent {
   messages = input.required<Message[]>();
+  activeUser = input.required<AuthUser>();
+
+  scrollContainer = viewChild.required(CdkScrollable);
+
+  constructor() {
+    effect(() => {
+      if (this.messages().length && this.scrollContainer()) {
+        this.scrollContainer().scrollTo({
+          bottom: 0,
+          behavior: 'smooth',
+        })
+      }
+    })
+  }
 }
